@@ -82,7 +82,8 @@ function runSetupCommands() {
     "bun add react-map-gl@^7.1.7",
     "bun add @turf/turf@^7.1.0",
     "bun install maplibre-gl react-map-gl @turf/turf",
-    "bun add react-map-gl maplibre-gl"
+    "bun add react-map-gl maplibre-gl",
+    "bun install jspdf lucide-react recharts"
 ];
     
     if (commands.length === 0) {
