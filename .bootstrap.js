@@ -81,7 +81,8 @@ function runSetupCommands() {
     "bun add maplibre-gl@^4.7.1",
     "bun add react-map-gl@^7.1.7",
     "bun add @turf/turf@^7.1.0",
-    "bun install maplibre-gl react-map-gl @turf/turf"
+    "bun install maplibre-gl react-map-gl @turf/turf",
+    "bun add react-map-gl maplibre-gl"
 ];
     
     if (commands.length === 0) {
