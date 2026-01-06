@@ -77,7 +77,11 @@ function updateWranglerJsonc() {
 }
 
 function runSetupCommands() {
-    const commands = [];
+    const commands = [
+    "bun add maplibre-gl@^4.7.1",
+    "bun add react-map-gl@^7.1.7",
+    "bun add @turf/turf@^7.1.0"
+];
     
     if (commands.length === 0) {
         console.log('⊘ No setup commands to run');
