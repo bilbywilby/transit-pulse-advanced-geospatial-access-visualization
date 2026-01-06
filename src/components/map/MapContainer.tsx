@@ -1,16 +1,18 @@
 import React, { useMemo } from 'react';
 import Map, { Source, Layer, NavigationControl, MapLayerMouseEvent } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { MOCK_PARCELS, MOCK_STOPS, MOCK_VEHICLES } from '@/lib/mock-geo-data';
+import { MOCK_PARCELS, MOCK_STOPS } from '@/lib/mock-geo-data';
 interface MapContainerProps {
   layers: {
     parcels: boolean;
     stops: boolean;
     vehicles: boolean;
+    demographics: boolean;
   };
+  liveVehicles: GeoJSON.FeatureCollection;
   onFeatureClick: (feature: any | null) => void;
 }
-export function MapContainer({ layers, onFeatureClick }: MapContainerProps) {
+export function MapContainer({ layers, liveVehicles, onFeatureClick }: MapContainerProps) {
   const initialViewState = {
     longitude: -75.1652,
     latitude: 39.9526,
@@ -32,6 +34,28 @@ export function MapContainer({ layers, onFeatureClick }: MapContainerProps) {
       'fill-outline-color': '#ffffff',
     },
   }), []);
+  const liveVehicleLayerStyle: any = useMemo(() => ({
+    id: 'live-vehicles-layer',
+    type: 'circle',
+    paint: {
+      'circle-radius': [
+        'interpolate',
+        ['linear'],
+        ['zoom'],
+        10, 4,
+        15, 8
+      ],
+      'circle-color': [
+        'case',
+        ['>', ['get', 'delay'], 10], '#ef4444',
+        ['>', ['get', 'delay'], 5], '#f59e0b',
+        '#10b981'
+      ],
+      'circle-stroke-width': 2,
+      'circle-stroke-color': '#ffffff',
+      'circle-opacity': 0.9,
+    },
+  }), []);
   const stopLayerStyle: any = useMemo(() => ({
     id: 'stops-layer',
     type: 'circle',
@@ -42,14 +66,14 @@ export function MapContainer({ layers, onFeatureClick }: MapContainerProps) {
       'circle-stroke-color': '#ffffff',
     },
   }), []);
-  const vehicleLayerStyle: any = useMemo(() => ({
-    id: 'vehicles-layer',
-    type: 'circle',
+  // Mock Demographics (ACS Tracts)
+  const demographicLayerStyle: any = useMemo(() => ({
+    id: 'demographic-layer',
+    type: 'fill',
     paint: {
-      'circle-radius': 5,
-      'circle-color': '#ec4899',
-      'circle-stroke-width': 2,
-      'circle-stroke-color': '#ffffff',
+      'fill-color': '#6366f1',
+      'fill-opacity': 0.3,
+      'fill-outline-color': '#818cf8',
     },
   }), []);
   const handleClick = (e: MapLayerMouseEvent) => {
@@ -65,10 +89,15 @@ export function MapContainer({ layers, onFeatureClick }: MapContainerProps) {
       <Map
         initialViewState={initialViewState}
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
-        interactiveLayerIds={['parcels-layer', 'stops-layer']}
+        interactiveLayerIds={['parcels-layer', 'stops-layer', 'live-vehicles-layer']}
         onClick={handleClick}
       >
         <NavigationControl position="bottom-right" />
+        {layers.demographics && (
+          <Source id="demographics" type="geojson" data={MOCK_PARCELS}>
+            <Layer {...demographicLayerStyle} />
+          </Source>
+        )}
         {layers.parcels && (
           <Source id="parcels" type="geojson" data={MOCK_PARCELS}>
             <Layer {...parcelLayerStyle} />
@@ -79,9 +108,9 @@ export function MapContainer({ layers, onFeatureClick }: MapContainerProps) {
             <Layer {...stopLayerStyle} />
           </Source>
         )}
-        {layers.vehicles && (
-          <Source id="vehicles" type="geojson" data={MOCK_VEHICLES}>
-            <Layer {...vehicleLayerStyle} />
+        {layers.vehicles && liveVehicles && (
+          <Source id="live-vehicles" type="geojson" data={liveVehicles}>
+            <Layer {...liveVehicleLayerStyle} />
           </Source>
         )}
       </Map>
