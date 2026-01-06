@@ -1,6 +1,6 @@
 # Cloudflare Workers React Template
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bilbywilby/transit-pulse-advanced-geospatial-access-visualization)
 
 A production-ready full-stack boilerplate for Cloudflare Workers with React, Vite, Tailwind CSS, shadcn/ui, and TanStack Query. Build modern web apps with serverless APIs, static asset serving, and a responsive UI out of the box.
 
@@ -88,7 +88,7 @@ Deploy to Cloudflare Workers with a single command:
 
 Your app will be live at `https://<worker-name>.<subdomain>.workers.dev`.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/bilbywilby/transit-pulse-advanced-geospatial-access-visualization)
 
 ### Custom Domain
 
