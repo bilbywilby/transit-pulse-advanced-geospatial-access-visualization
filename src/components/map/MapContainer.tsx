@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useEffect, useRef, useState } from 'react';
 import Map, { Source, Layer, NavigationControl, MapLayerMouseEvent, MapRef } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MOCK_PARCELS, MOCK_STOPS, MOCK_TRACTS } from '@/lib/mock-geo-data';
@@ -11,6 +11,7 @@ interface MapContainerProps {
 }
 export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToRequest }: MapContainerProps) {
   const mapRef = useRef<MapRef>(null);
+  const [hoveredId, setHoveredId] = useState<string | number | null>(null);
   const initialViewState = {
     longitude: -75.1652,
     latitude: 39.9526,
@@ -39,16 +40,24 @@ export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToReques
         0.5, '#f59e0b',
         1, '#10b981'
       ],
-      'fill-opacity': layers.parcels.opacity,
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'hover'], false],
+        layers.parcels.opacity * 1.2,
+        layers.parcels.opacity
+      ],
       'fill-outline-color': '#ffffff',
-      'fill-outline-opacity': layers.parcels.opacity * 0.5,
     },
   }), [layers.parcels.opacity]);
   const liveVehicleLayerStyle: any = useMemo(() => ({
     id: 'live-vehicles-layer',
     type: 'circle',
     paint: {
-      'circle-radius': ['interpolate', ['linear'], ['zoom'], 10, 4, 15, 10],
+      'circle-radius': [
+        'interpolate', ['linear'], ['zoom'], 
+        10, ['case', ['boolean', ['feature-state', 'hover'], false], 6, 4], 
+        15, ['case', ['boolean', ['feature-state', 'hover'], false], 14, 10]
+      ],
       'circle-color': [
         'case',
         ['>', ['get', 'delay'], 10], '#ef4444',
@@ -65,7 +74,7 @@ export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToReques
     id: 'stops-layer',
     type: 'circle',
     paint: {
-      'circle-radius': 6,
+      'circle-radius': ['case', ['boolean', ['feature-state', 'hover'], false], 10, 6],
       'circle-color': '#3b82f6',
       'circle-stroke-width': 2,
       'circle-stroke-color': '#ffffff',
@@ -89,6 +98,53 @@ export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToReques
       'fill-outline-opacity': layers.demographics.opacity * 0.3,
     },
   }), [layers.demographics.opacity]);
+  const onMouseMove = (e: MapLayerMouseEvent) => {
+    if (e.features && e.features.length > 0) {
+      const feature = e.features[0];
+      const canvas = mapRef.current?.getCanvas();
+      if (canvas) canvas.style.cursor = 'pointer';
+      if (hoveredId !== null) {
+        mapRef.current?.setFeatureState(
+          { source: 'parcels', id: hoveredId },
+          { hover: false }
+        );
+        mapRef.current?.setFeatureState(
+          { source: 'stops', id: hoveredId },
+          { hover: false }
+        );
+        mapRef.current?.setFeatureState(
+          { source: 'live-vehicles', id: hoveredId },
+          { hover: false }
+        );
+      }
+      setHoveredId(feature.id || null);
+      if (feature.id !== undefined) {
+        mapRef.current?.setFeatureState(
+          { source: feature.source, id: feature.id },
+          { hover: true }
+        );
+      }
+    }
+  };
+  const onMouseLeave = () => {
+    const canvas = mapRef.current?.getCanvas();
+    if (canvas) canvas.style.cursor = '';
+    if (hoveredId !== null) {
+      mapRef.current?.setFeatureState(
+        { source: 'parcels', id: hoveredId },
+        { hover: false }
+      );
+      mapRef.current?.setFeatureState(
+        { source: 'stops', id: hoveredId },
+        { hover: false }
+      );
+      mapRef.current?.setFeatureState(
+        { source: 'live-vehicles', id: hoveredId },
+        { hover: false }
+      );
+    }
+    setHoveredId(null);
+  };
   const handleClick = (e: MapLayerMouseEvent) => {
     const feature = e.features && e.features[0];
     onFeatureClick(feature || null);
@@ -101,6 +157,8 @@ export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToReques
         mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
         interactiveLayerIds={['parcels-layer', 'stops-layer', 'live-vehicles-layer']}
         onClick={handleClick}
+        onMouseMove={onMouseMove}
+        onMouseLeave={onMouseLeave}
       >
         <NavigationControl position="bottom-right" />
         {layers.demographics.visible && (
@@ -108,19 +166,15 @@ export function MapContainer({ layers, liveVehicles, onFeatureClick, flyToReques
             <Layer {...demographicLayerStyle} />
           </Source>
         )}
-        {layers.parcels.visible && (
-          <Source id="parcels" type="geojson" data={MOCK_PARCELS}>
-            <Layer {...parcelLayerStyle} />
-          </Source>
-        )}
-        {layers.stops.visible && (
-          <Source id="stops" type="geojson" data={MOCK_STOPS}>
-            <Layer {...stopLayerStyle} />
-          </Source>
-        )}
-        {layers.vehicles.visible && liveVehicles && (
+        <Source id="parcels" type="geojson" data={MOCK_PARCELS}>
+          {layers.parcels.visible && <Layer {...parcelLayerStyle} />}
+        </Source>
+        <Source id="stops" type="geojson" data={MOCK_STOPS}>
+          {layers.stops.visible && <Layer {...stopLayerStyle} />}
+        </Source>
+        {liveVehicles && (
           <Source id="live-vehicles" type="geojson" data={liveVehicles}>
-            <Layer {...liveVehicleLayerStyle} />
+            {layers.vehicles.visible && <Layer {...liveVehicleLayerStyle} />}
           </Source>
         )}
       </Map>

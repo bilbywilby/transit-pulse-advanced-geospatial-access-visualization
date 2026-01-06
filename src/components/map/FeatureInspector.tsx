@@ -1,9 +1,10 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { X, MapPin, Building2, Bus, TrendingUp, Info } from 'lucide-react';
+import { X, MapPin, Building2, Bus, TrendingUp, Info, Activity, Clock, Navigation } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, ResponsiveContainer, Cell } from 'recharts';
+import { getRelativeTime, getDelayColor, cn } from '@/lib/utils';
 interface FeatureInspectorProps {
   feature: any | null;
   onClose: () => void;
@@ -11,8 +12,10 @@ interface FeatureInspectorProps {
 export function FeatureInspector({ feature, onClose }: FeatureInspectorProps) {
   if (!feature) return null;
   const props = feature.properties;
-  const isParcel = !!props.transit_access_score_norm;
+  // Robust type checks
+  const isParcel = !!props.transit_access_score_norm && !props.stop_id;
   const isStop = !!props.stop_id;
+  const isVehicle = !!props.route && !props.stop_id && !props.transit_access_score_norm;
   const scoreData = [
     { name: 'Nbrhd Avg', score: props.neighborhood_avg_score || 0.45 },
     { name: 'This Parcel', score: props.transit_access_score_norm || 0 },
@@ -23,8 +26,10 @@ export function FeatureInspector({ feature, onClose }: FeatureInspectorProps) {
       <Card className="bg-background/95 backdrop-blur-lg border-border/50 shadow-2xl overflow-hidden ring-1 ring-white/10">
         <CardHeader className="p-4 border-b border-border/20 flex flex-row items-center justify-between bg-muted/30">
           <CardTitle className="text-sm font-bold truncate pr-4 flex items-center gap-2">
-            {isParcel ? <Building2 className="w-4 h-4 text-emerald-500" /> : <Bus className="w-4 h-4 text-blue-500" />}
-            {isParcel ? 'Parcel Analysis' : 'Station Profile'}
+            {isParcel && <Building2 className="w-4 h-4 text-emerald-500" />}
+            {isStop && <Bus className="w-4 h-4 text-blue-500" />}
+            {isVehicle && <Activity className="w-4 h-4 text-orange-500" />}
+            {isParcel ? 'Parcel Analysis' : isStop ? 'Station Profile' : 'Vehicle Tracker'}
           </CardTitle>
           <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-white/10" onClick={onClose}>
             <X className="h-4 w-4" />
@@ -94,15 +99,52 @@ export function FeatureInspector({ feature, onClose }: FeatureInspectorProps) {
               <div className="space-y-2">
                 <div className="text-[10px] text-muted-foreground uppercase font-bold">Active Routes</div>
                 <div className="flex flex-wrap gap-1.5">
-                  {props.routes.split(',').map((r: string) => (
-                    <Badge key={r} variant="secondary" className="text-[10px] px-2 py-0 bg-white/5 hover:bg-white/10">{r.trim()}</Badge>
+                  {props.routes?.split(',').map((r: string) => (
+                    <Badge key={r} variant="secondary" className="text-[10px] px-2 py-0 bg-white/5">{r.trim()}</Badge>
                   ))}
                 </div>
               </div>
             </div>
           )}
-          <Button className="w-full text-xs h-9 bg-emerald-600 hover:bg-emerald-500 font-bold">
-            Full Equity Report
+          {isVehicle && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold">Route</div>
+                  <Badge className="bg-orange-500 text-white font-black text-sm px-3">{props.route}</Badge>
+                </div>
+                <div className="text-right space-y-1">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold">Status</div>
+                  <div className={cn("text-xs font-bold", getDelayColor(props.delay))}>
+                    {props.delay > 0 ? `${props.delay}m Delay` : 'On Time'}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Navigation className="w-3 h-3" />
+                  <span className="text-[10px] uppercase font-bold tracking-tighter">Destination</span>
+                </div>
+                <div className="text-sm font-semibold">{props.destination || 'In Transit'}</div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="p-3 bg-muted/50 rounded-xl border border-border/50">
+                  <div className="text-[9px] text-muted-foreground uppercase font-bold">Vehicle ID</div>
+                  <div className="text-sm font-mono font-bold">{props.id}</div>
+                </div>
+                <div className="p-3 bg-muted/50 rounded-xl border border-border/50 flex flex-col justify-center">
+                   <div className="flex items-center gap-1.5 text-[9px] text-muted-foreground uppercase font-bold">
+                    <Clock className="w-2.5 h-2.5" /> Updated
+                   </div>
+                   <div className="text-[10px] font-medium mt-1">
+                    {getRelativeTime(props.last_updated)}
+                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <Button className="w-full text-xs h-9 bg-primary hover:bg-primary/90 font-bold transition-all active:scale-[0.98]">
+            {isParcel ? 'Full Equity Report' : isStop ? 'Station Analytics' : 'Live Tracking Mode'}
           </Button>
         </CardContent>
       </Card>
